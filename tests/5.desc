@@ -1,0 +1,1 @@
+Testing whether address returned by anonymous mmap is page aligned.

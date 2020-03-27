@@ -1,0 +1,4 @@
+XV6_TEST_OUTPUT : mmap good
+XV6_TEST_OUTPUT : Ret of memcmp 0
+XV6_TEST_OUTPUT : mmap() has correctly cleared the newly mapped anonymous memory region
+XV6_TEST_OUTPUT : munmap good

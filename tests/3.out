@@ -1,0 +1,5 @@
+XV6_TEST_OUTPUT : mmap good
+XV6_TEST_OUTPUT : Strlen Before modification: 0
+XV6_TEST_OUTPUT : str = 012345
+XV6_TEST_OUTPUT : Strlen After modification: 6
+XV6_TEST_OUTPUT : munmap good

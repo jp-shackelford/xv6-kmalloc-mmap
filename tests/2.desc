@@ -1,0 +1,2 @@
+Test simple mmap and munmap.
+Test mmap has zeroed the newly mapped anonymous region.

@@ -1,0 +1,1 @@
+Stress test 2: Testing allocating large sized memory using anonymous mmap in a loop.
