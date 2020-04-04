@@ -72,6 +72,10 @@ void            kinit2(void*, void*);
 // kbd.c
 void            kbdintr(void);
 
+// jps - kmalloc.c
+void*           kmalloc(uint);
+void            kmfree(void*);
+
 // lapic.c
 void            cmostime(struct rtcdate *r);
 int             lapicid(void);

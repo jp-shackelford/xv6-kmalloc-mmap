@@ -7,6 +7,32 @@
 #include "mmu.h"
 #include "proc.h"
 
+//jps - added kmalloc system call wrappers
+int
+sys_kmalloc(void)
+{
+  int nbytes;
+
+  if(argint(0, &nbytes) < 0)
+    return -1;
+
+  return (int)kmalloc((uint)nbytes);
+}
+
+//jps - added kmfree system call wrapper
+int
+sys_kmfree(void)
+{
+  int addr;
+
+  if(argint(0, &addr) < 0)
+    return -1;
+
+  kmfree((void*)addr);
+
+  return 0;
+}
+
 int
 sys_fork(void)
 {

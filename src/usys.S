@@ -29,3 +29,5 @@ SYSCALL(getpid)
 SYSCALL(sbrk)
 SYSCALL(sleep)
 SYSCALL(uptime)
+SYSCALL(kmalloc)  //jps - added SYSCALL for kmalloc
+SYSCALL(kmfree)   //jps - added SYSCALL for kmfree
