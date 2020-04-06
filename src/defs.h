@@ -91,6 +91,11 @@ void            log_write(struct buf*);
 void            begin_op();
 void            end_op();
 
+// jps - mmap.c
+void*           mmap(void *addr, uint length, int prot,
+                        int flags, int fd, int offset);
+int             munmap(void *addr, uint length);
+
 // mp.c
 extern int      ismp;
 void            mpinit(void);

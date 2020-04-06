@@ -52,10 +52,8 @@ morecore(uint nu)
   char *p;
   Header *hp;
 
-  if(nu < 4096)
-    nu = 4096;
   p = kalloc(); //TODO: make this not waste a page
-  if(p == (char*)-1)
+  if(p == 0)
     return 0;
   hp = (Header*)p;
   hp->s.size = nu;

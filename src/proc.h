@@ -34,6 +34,19 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+//jps - mapped regions linked list struct
+enum region_types {ANONYMOUS, FILE_BACKED};
+
+struct mapped_region 
+{
+  void* start_addr; //starting address for mapped region 
+  uint length;      //length of allocated regino
+  enum region_types region_type; //anonymous of file-backed
+  uint offset;      //offset in a file-backed allocation
+  uint fd;          //file descriptor (-1 for anonymous allocation)
+  struct mapped_region *next; //next mapped region is our linked-list
+};
+
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
@@ -49,6 +62,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  struct mapped_region *mapped_regions;  //jps - added mapped region linked-list
 };
 
 // Process memory is laid out contiguously, low addresses first:
