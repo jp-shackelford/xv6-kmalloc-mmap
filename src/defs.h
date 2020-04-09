@@ -92,9 +92,9 @@ void            begin_op();
 void            end_op();
 
 // jps - mmap.c
-void*           mmap(void *addr, uint length, int prot,
-                        int flags, int fd, int offset);
-int             munmap(void *addr, uint length);
+void*           mmap(void *, uint, int, int, int, int);
+int             munmap(void *, uint);
+void            free_mmap_ll(void);
 
 // mp.c
 extern int      ismp;
