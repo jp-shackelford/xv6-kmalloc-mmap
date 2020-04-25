@@ -8,53 +8,117 @@
 #include "traps.h"
 #include "memlayout.h"
 #include "mmu.h"
+#include "mman.h"
 
 
-/*Testing whether address returned by anonymous mmap is page aligned.*/
+/* File Backed mmap test : Accessing mmap-ed memory region after file close.
+The contents should persist.*/
+
 int
 main(int argc, char *argv[])
 {
-  int size = 200;
-  char *r1 = mmap(0, size, 0/*prot*/, 0/*flags*/, -1/*fd*/, 0/*offset*/);
+  int rc;
+  char fileName[50];
+  strcpy(fileName, "sample.txt");
 
-  char *r2 = mmap(0, size, 0/*prot*/, 0/*flags*/, -1/*fd*/, 0/*offset*/);
 
-  char *r3 = mmap(0, size, 0/*prot*/, 0/*flags*/, -1/*fd*/, 0/*offset*/);
-
-  int rem1 = ((int)r1 % PGSIZE);
-  int rem2 = ((int)r2 % PGSIZE);
-  int rem3 = ((int)r3 % PGSIZE);
-
-  printf(1, "XV6_TEST_OUTPUT : rem1 = %d rem2 = %d rem3 = %d\n",rem1,rem2,rem3);
-
-  if(rem1 != 0 || rem2 != 0 || rem3 != 0)
+  // open existing file
+  int fd = open(fileName, O_RDWR);
+  if(fd<=0)
   {
-    printf(1, "XV6_TEST_OUTPUT : Address returned by mmap should be page aligned\n");
+    printf(1, "XV6_TEST_OUTPUT : file open failed %d\n", fd);
+    exit();
+  }
+  printf(1, "XV6_TEST_OUTPUT : file open suceeded\n");
+
+
+
+  // Read the file content into buff1
+  char buff1[256];
+  int sz = read(fd, buff1, 50);
+  buff1[sz] = '\0';
+  printf(1, "XV6_TEST_OUTPUT : First Read returned : %d\n", sz);
+  printf(1, "XV6_TEST_OUTPUT : file content : %s\n", (char*)buff1);
+
+
+
+  // close file
+  rc = close(fd);
+  if(rc != 0)
+  {
+    printf(1, "XV6_TEST_OUTPUT : file close failed\n");
+    exit();
+  }
+  printf(1, "XV6_TEST_OUTPUT : file close suceeded\n");
+
+
+
+
+  // open the file again
+  fd = open(fileName, O_RDWR);
+  if(fd<=0)
+  {
+    printf(1, "XV6_TEST_OUTPUT : file open failed %d\n", fd);
+    exit();
+  }
+  printf(1, "XV6_TEST_OUTPUT : file open suceeded\n");
+
+
+
+  // mmap the file
+  int file_offset = 0;
+  int map_size = 50;
+  char *addr = (char *) mmap(0, map_size, PROT_WRITE, MAP_FILE, fd, file_offset);
+
+  if (addr<=0)
+  {
+    printf(1, "XV6_TEST_OUTPUT : mmap failed\n");
+    exit();
+  }
+  printf(1, "XV6_TEST_OUTPUT : mmap suceeded\n");
+
+
+
+  // close file
+  rc = close(fd);
+  if(rc != 0)
+  {
+    printf(1, "XV6_TEST_OUTPUT : file close failed\n");
+    exit();
+  }
+  printf(1, "XV6_TEST_OUTPUT : file close suceeded\n");
+
+
+
+  // Read the content from the mmap-ed memory region
+  char buff2[256];
+  strcpy(buff2, addr);
+  printf(1, "XV6_TEST_OUTPUT : File content from mmap: %s\n", (char*)buff2);
+
+  int ret = strcmp(buff1, buff2);
+  printf(1, "XV6_TEST_OUTPUT : Return val of strcmp %d\n", ret);
+
+  if (ret == 0)
+  {
+    printf(1, "XV6_TEST_OUTPUT : File content and memory mapped content are Same.\n");
+  }
+  else
+  {
+    printf(1, "XV6_TEST_OUTPUT : File content and memory mapped content are different.\n");
     exit();
   }
 
-  printf(1, "XV6_TEST_OUTPUT : mmap good --> address returned is page aligned\n");
 
-  int rv1 = munmap(r1, size);
-  if (rv1 < 0) {
+
+  // munmap
+  rc = munmap(addr, map_size);
+  if (rc < 0) 
+  {
     printf(1, "XV6_TEST_OUTPUT : munmap failed\n");
     exit();
   }
+  printf(1, "XV6_TEST_OUTPUT : munmap suceeded\n");
 
-  int rv2 = munmap(r2, size);
-  if (rv2 < 0) {
-    printf(1, "XV6_TEST_OUTPUT : munmap failed\n");
-    exit();
-  }
-
-
-  int rv3 = munmap(r3, size);
-  if (rv3 < 0) {
-    printf(1, "XV6_TEST_OUTPUT : munmap failed\n");
-    exit();
-  }
-  
-  printf(1, "XV6_TEST_OUTPUT : munmap good\n");
 
   exit();
 }

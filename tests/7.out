@@ -1,3 +1,20 @@
-XV6_TEST_OUTPUT : mmap good
-XV6_TEST_OUTPUT : strlen(r) = 8191
-XV6_TEST_OUTPUT : munmap good
+XV6_TEST_OUTPUT : file creation suceeded
+XV6_TEST_OUTPUT : writing 0 to file
+XV6_TEST_OUTPUT : writing 4 to file
+XV6_TEST_OUTPUT : writing 8 to file
+XV6_TEST_OUTPUT : writing 12 to file
+XV6_TEST_OUTPUT : writing 16 to file
+XV6_TEST_OUTPUT : writing 20 to file
+XV6_TEST_OUTPUT : writing 24 to file
+XV6_TEST_OUTPUT : writing 28 to file
+XV6_TEST_OUTPUT : file write suceeded
+XV6_TEST_OUTPUT : file close suceeded
+XV6_TEST_OUTPUT : file open suceeded
+XV6_TEST_OUTPUT : mmap suceeded
+XV6_TEST_OUTPUT : Expected val : 16 Actual val : 16
+XV6_TEST_OUTPUT : Expected val : 20 Actual val : 20
+XV6_TEST_OUTPUT : Expected val : 24 Actual val : 24
+XV6_TEST_OUTPUT : Expected val : 28 Actual val : 28
+XV6_TEST_OUTPUT : file is correctly mapped
+XV6_TEST_OUTPUT : munmap suceeded
+XV6_TEST_OUTPUT : file close suceeded

@@ -1,1 +1,1 @@
-testing kmalloc and kmfree
+Testing whether address returned by mmap is page aligned.

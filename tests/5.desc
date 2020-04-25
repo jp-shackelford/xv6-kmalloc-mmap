@@ -1,1 +1,2 @@
-Testing whether address returned by anonymous mmap is page aligned.
+File Backed mmap test : Accessing mmap-ed memory region after file close.
+The contents should persist.

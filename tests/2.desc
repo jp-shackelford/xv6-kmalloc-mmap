@@ -1,2 +1,1 @@
-Test simple mmap and munmap.
-Test mmap has zeroed the newly mapped anonymous region.
+Anonymous mmap Test : Testing Anonymous mmap with PROT_WRITE flag
