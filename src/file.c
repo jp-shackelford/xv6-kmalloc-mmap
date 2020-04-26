@@ -16,6 +16,9 @@ struct {
   struct file file[NFILE];
 } ftable;
 
+//jps - adding fileseek prototype
+int fileseek (struct file* f, uint offset);
+
 void
 fileinit(void)
 {
@@ -153,5 +156,14 @@ filewrite(struct file *f, char *addr, int n)
     return i == n ? n : -1;
   }
   panic("filewrite");
+}
+
+//jps - added fileseek function
+int 
+fileseek (struct file* f, uint offset)
+{
+  acquire(&ftable.lock);
+
+  release(&ftable.lock);
 }
 
