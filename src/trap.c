@@ -14,6 +14,64 @@ extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
 
+// jps - pagefault_handler()
+/*
+ *  This function helps implement the lazy mmap allocation required for this project.
+ *  When a pagefault occurs, this function will be called and the mmap linked list
+ *  will be searched to see if the faulting address has been decleared as allocated.
+ *  If it has been "allocated", the page containing the faulting address will acutally
+ *  be allocated to the process.
+ * 
+ *  INPUT: struct trapframe *tf - the trapframe for a faulting address
+ *  OUTPUT: void
+ */
+void
+pagefault_handler(struct trapframe *tf)
+{
+  struct proc *curproc = myproc();
+  uint fault_addr = rcr2(); //Control Register 2, holds the faulting page address.
+
+  // Start -- Required debugging statement -----
+  cprintf("============in pagefault_handler============\n");
+  cprintf("pid %d %s: trap %d err %d on cpu %d "
+  "eip 0x%x addr 0x%x\n",
+  curproc->pid, curproc->name, tf->trapno,
+  tf->err, cpuid(), tf->eip, fault_addr);
+  // End -- Required debugging statement ----
+
+  // Validate that the faulting address belongs to a valid mmap region
+  // (check curproc linked list)
+  int valid = 0;
+  mmapped_region *p = curproc->region_head;
+
+  //round the faulting address down to the page start.
+  fault_addr = PGROUNDDOWN(fault_addr);
+
+  while(p)
+  {
+    if (fault_addr == (uint)p->start_addr)
+    {
+      valid = 1;
+      break; //leave the loop once we found a valid entry
+    }
+    else
+    {
+      p = p->next;
+    }
+  }
+
+  // Map a single page around the faulting address.
+  if (valid == 1)
+  {
+    if(mappages(curproc->pgdir, (void*)fault_addr, PGSIZE, V2P(p->start_addr), PTE_W|PTE_U) < 0)
+    {
+      cprintf("allocuvm out of memory (2)\n");
+      deallocuvm(curproc->pgdir, curproc->sz, curproc->sz - PGSIZE);
+      kfree(p->start_addr);
+    }
+  }
+}
+
 void
 tvinit(void)
 {
@@ -77,7 +135,9 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
-
+  case T_PGFLT: //jps - added pagefault check in the trap switch statement
+    pagefault_handler(tf);
+    break;
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){

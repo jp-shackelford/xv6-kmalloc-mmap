@@ -56,6 +56,8 @@ void *mmap(void *addr, uint length, int prot, int flags, int fd, int offset)
   // Get pointer to current process
   struct proc *p = myproc();
 
+//jps - Project 4 implementation
+#ifdef PROJECT_4
   // Expand the process' address sapce (w\ allocuvm)
   uint oldsz = p->sz;
   uint newsz = p->sz + length;
@@ -65,6 +67,39 @@ void *mmap(void *addr, uint length, int prot, int flags, int fd, int offset)
     return (void*)-1;
   }
   switchuvm(p);
+#else //jps - Project 5 implmentation (lazy mmap)
+  // Cannot call allocuvm to expand the process address space because we do not
+  // want to physically allocate all the memory. The following is based off of
+  // alocuvm, but does not use mappages.
+  uint oldsz = p->sz;
+  uint newsz = p->sz + length;
+
+  char *mem;
+  uint a;
+
+  if(newsz >= KERNBASE)
+    newsz = 0;
+  if(newsz < oldsz)
+    newsz = oldsz;
+
+  a = PGROUNDUP(oldsz);
+  for(; a < newsz; a += PGSIZE){
+    mem = kalloc();
+    if(mem == 0){
+      cprintf("allocuvm out of memory\n");
+      deallocuvm(p->pgdir, newsz, oldsz);
+      return 0;
+    }
+    memset(mem, 0, PGSIZE);
+  }
+  p->sz = newsz;
+
+  if (p->sz == 0)
+  {
+    return (void*)-1;
+  }
+  switchuvm(p);
+#endif
 
   // Allocate a new region for our mmap (w/ kmalloc)
   mmapped_region* r = (mmapped_region*)kmalloc(sizeof(mmapped_region*));
