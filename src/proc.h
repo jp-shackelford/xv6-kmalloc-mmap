@@ -34,9 +34,6 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
-//jps - mapped regions double linked list structs
-enum region_types {ANONYMOUS, FILE_BACKED};
-
 typedef struct mmapped_region 
 { 
   //Linked-List pointers
@@ -45,7 +42,7 @@ typedef struct mmapped_region
   //Region Meta-Data:
   void* start_addr; //starting address for mapped region 
   uint length;      //length of allocated region
-  enum region_types region_type; //anonymous of file-backed
+  int region_type; //anonymous of file-backed
   int offset;      //offset in a file-backed allocation
   int fd;          //file descriptor (-1 for anonymous allocation)
 } mmapped_region;

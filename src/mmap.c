@@ -5,6 +5,7 @@
 #include "param.h"
 #include "memlayout.h"
 #include "mmu.h"
+#include "mman.h"
 #include "proc.h"
 
 //jps - mmap.c
@@ -55,6 +56,7 @@ void *mmap(void *addr, uint length, int prot, int flags, int fd, int offset)
 
   // Get pointer to current process
   struct proc *p = myproc();
+
 
 //jps - Project 4 implementation
 #ifdef PROJECT_4
@@ -112,10 +114,9 @@ void *mmap(void *addr, uint length, int prot, int flags, int fd, int offset)
   // Assign list-data and meta-data to the new region
   r->start_addr = (addr = (void*)PGROUNDDOWN(oldsz));
   r->length = length;
-  r->region_type = ANONYMOUS;
+  r->region_type = flags;
   r->offset = offset;
-  //r->fd = -1; // TODO: This value ends up dictating the address of our ll nodes on later iterations??
-                // eg: when fd = -1, future calls to mmap make the node addresses 0xFFFFFFFF(hex for -1)
+  r->fd = fd;
   r->next = 0;
 
   // Handle first call to mmap
@@ -126,7 +127,7 @@ void *mmap(void *addr, uint length, int prot, int flags, int fd, int offset)
   else // Add region to an already existing mapped_regions list
   {
     // First check if our address is already allocated in the head node
-    if (addr == p->region_head->start_addr) // conflict! Increment addr by a page (no allocation can be larger than a page?)
+    if (addr == p->region_head->start_addr) // conflict! Increment addr by length
     {
       addr += PGROUNDDOWN(PGSIZE+length);
     }

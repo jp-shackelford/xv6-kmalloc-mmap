@@ -16,9 +16,6 @@ struct {
   struct file file[NFILE];
 } ftable;
 
-//jps - adding fileseek prototype
-int fileseek (struct file* f, uint offset);
-
 void
 fileinit(void)
 {
@@ -159,11 +156,14 @@ filewrite(struct file *f, char *addr, int n)
 }
 
 //jps - added fileseek function
+//  coppied strucutre of lock/unlock from filewrite() above.
 int 
 fileseek (struct file* f, uint offset)
 {
-  acquire(&ftable.lock);
-
-  release(&ftable.lock);
+  begin_op();
+  ilock(f->ip);
+  f->off = offset;
+  iunlock(f->ip);
+  end_op();
 }
 
