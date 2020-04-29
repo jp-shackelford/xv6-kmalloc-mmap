@@ -92,6 +92,25 @@ sys_munmap(void)
   return munmap((void*)addr, (uint)length);
 }
 
+//jps - added msync system call TODO: add mysnc
+int
+sys_msync(void)
+{
+  int addr;
+  int length;
+
+  if(argint(0, &addr) < 0)
+  {
+    return -1;
+  }
+  if(argint(1, &length) < 0)
+  {
+    return -1;
+  }
+
+  return msync((void*)addr, (uint)length);
+}
+
 int
 sys_fork(void)
 {

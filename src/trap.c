@@ -2,6 +2,7 @@
 #include "defs.h"
 #include "param.h"
 #include "memlayout.h"
+#include "mman.h"
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
@@ -42,33 +43,71 @@ pagefault_handler(struct trapframe *tf)
   // Validate that the faulting address belongs to a valid mmap region
   // (check curproc linked list)
   int valid = 0;
-  mmapped_region *p = curproc->region_head;
+  mmapped_region *mmap_node = curproc->region_head;
 
   //round the faulting address down to the page start.
   fault_addr = PGROUNDDOWN(fault_addr);
 
-  while(p)
+  while(mmap_node)
   {
-    if (fault_addr == (uint)p->start_addr)
+    //if (fault_addr == (uint)mmap_node->start_addr)
+    if ((uint)(mmap_node->start_addr) <= fault_addr && (uint)(mmap_node->start_addr + mmap_node->length) > fault_addr)
     {
       valid = 1;
       break; //leave the loop once we found a valid entry
     }
     else
     {
-      p = p->next;
+      mmap_node = mmap_node->next;
     }
   }
 
   // Map a single page around the faulting address.
+  // Allocation based off of allocuvm from vm.c
   if (valid == 1)
   {
-    if(mappages(curproc->pgdir, (void*)fault_addr, PGSIZE, V2P(p->start_addr), PTE_W|PTE_U) < 0)
+    char *mem;
+    mem = kalloc();
+
+    if(mem == 0)
     {
-      cprintf("allocuvm out of memory (2)\n");
-      deallocuvm(curproc->pgdir, curproc->sz, curproc->sz - PGSIZE);
-      kfree(p->start_addr);
+      cprintf("Killed process in pagefault_handler\n");     
+      myproc()->killed = 1;
+      return;
     }
+    memset(mem, 0, PGSIZE);
+
+    // determine protection bits needed for mappages() call
+    int perm;
+    if (mmap_node->prot == PROT_WRITE)
+    {
+      perm = PTE_W|PTE_U; //give write permissions
+    }
+    else
+    {
+      perm = PTE_U; //do not give write permissions
+    }
+
+    if(mappages(curproc->pgdir, (char*)fault_addr, PGSIZE, V2P(mem), perm) < 0)
+    {
+      cprintf("Killed process in pagefault_handler\n");     
+      myproc()->killed = 1;
+      kfree(mem);
+      return;
+    }
+
+    // If we are performing file-backed mmap, seek to where we need to in the
+    // file and then read it into the memory location allocated above (mem)
+    if (mmap_node->region_type == MAP_FILE)
+    {
+      fileseek(curproc->ofile[mmap_node->fd], mmap_node->offset);
+      fileread(curproc->ofile[mmap_node->fd], mem, mmap_node->length);
+    }
+  }
+  else  //Page fault on a non-allocated address
+  {
+    cprintf("Killed process in pagefault_handler\n");     
+    myproc()->killed = 1;
   }
 }
 

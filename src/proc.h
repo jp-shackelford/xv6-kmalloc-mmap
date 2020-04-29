@@ -45,6 +45,7 @@ typedef struct mmapped_region
   int region_type; //anonymous of file-backed
   int offset;      //offset in a file-backed allocation
   int fd;          //file descriptor (-1 for anonymous allocation)
+  int prot;        //protection bits for the mapped region (default is read-only)
 } mmapped_region;
 
 // Per-process state

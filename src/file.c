@@ -165,5 +165,6 @@ fileseek (struct file* f, uint offset)
   f->off = offset;
   iunlock(f->ip);
   end_op();
+  return 0;
 }
 

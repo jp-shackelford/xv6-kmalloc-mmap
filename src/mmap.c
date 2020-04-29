@@ -56,68 +56,49 @@ void *mmap(void *addr, uint length, int prot, int flags, int fd, int offset)
 
   // Get pointer to current process
   struct proc *p = myproc();
-
-
-//jps - Project 4 implementation
-#ifdef PROJECT_4
-  // Expand the process' address sapce (w\ allocuvm)
-  uint oldsz = p->sz;
-  uint newsz = p->sz + length;
-  p->sz = allocuvm(p->pgdir, oldsz, newsz);
-  if (p->sz == 0)
-  {
-    return (void*)-1;
-  }
-  switchuvm(p);
-#else //jps - Project 5 implmentation (lazy mmap)
-  // Cannot call allocuvm to expand the process address space because we do not
-  // want to physically allocate all the memory. The following is based off of
-  // alocuvm, but does not use mappages.
   uint oldsz = p->sz;
   uint newsz = p->sz + length;
 
-  char *mem;
-  uint a;
-
-  if(newsz >= KERNBASE)
-    newsz = 0;
-  if(newsz < oldsz)
-    newsz = oldsz;
-
-  a = PGROUNDUP(oldsz);
-  for(; a < newsz; a += PGSIZE){
-    mem = kalloc();
-    if(mem == 0){
-      cprintf("allocuvm out of memory\n");
-      deallocuvm(p->pgdir, newsz, oldsz);
-      return 0;
-    }
-    memset(mem, 0, PGSIZE);
-  }
+  // Expand process size
   p->sz = newsz;
 
-  if (p->sz == 0)
-  {
-    return (void*)-1;
-  }
-  switchuvm(p);
-#endif
-
   // Allocate a new region for our mmap (w/ kmalloc)
-  mmapped_region* r = (mmapped_region*)kmalloc(sizeof(mmapped_region*));
+  mmapped_region* r = (mmapped_region*)kmalloc(sizeof(mmapped_region));
   if (r == NULL)
   {
-    deallocuvm(p->pgdir, newsz, oldsz);
     return (void*)-1;
   }
 
   // Assign list-data and meta-data to the new region
-  r->start_addr = (addr = (void*)PGROUNDDOWN(oldsz));
+  r->start_addr = (addr = (void*)PGROUNDDOWN((uint)oldsz));
   r->length = length;
   r->region_type = flags;
   r->offset = offset;
-  r->fd = fd;
+  r->prot = prot;
   r->next = 0;
+
+  // Check the flags and file descriptor argument (flags, fd)
+  if (flags == MAP_ANONYMOUS)
+  {
+    if (fd != -1) //fd must be -1 in this case (mmap man page sugestion for mobility)
+    {
+      return (void*)-1;
+    }
+    // do not set r->fd. Not needed for Anonymous mmap
+  }
+  else if (flags == MAP_FILE)
+  {
+    if (fd > -1)
+    {
+      filedup(p->ofile[fd]);
+      r->fd = fd;
+    }
+    else
+    {
+      kmfree(r);
+      return (void*)-1;
+    }
+  }
 
   // Handle first call to mmap
   if (p->nregions == 0)
@@ -127,37 +108,31 @@ void *mmap(void *addr, uint length, int prot, int flags, int fd, int offset)
   else // Add region to an already existing mapped_regions list
   {
     // First check if our address is already allocated in the head node
-    if (addr == p->region_head->start_addr) // conflict! Increment addr by length
-    {
-      addr += PGROUNDDOWN(PGSIZE+length);
-    }
+    // if (addr == p->region_head->start_addr) // conflict! Increment addr by length
+    // {
+    //   addr += PGROUNDDOWN(PGSIZE+length);
+    // }
     // Traverse the nodes in our dll to see if addr is already allocated
     mmapped_region* cursor = p->region_head;
     while (cursor->next != 0)
     {
-      if (addr == cursor->start_addr)
-      {
-        addr += PGROUNDDOWN(PGSIZE+length);
-        cursor = p->region_head; // start over, we may overlap past regions now...
-      }
-      else if (addr == (void*)KERNBASE || addr > (void*)KERNBASE) //we've run out of memory!
-      {
-        kmfree(r);
-        deallocuvm(p->pgdir, newsz, oldsz);
-        return (void*)-1;
-      }
+      // if (addr == cursor->start_addr)
+      // {
+      //   addr += PGROUNDDOWN(PGSIZE+cursor->length);
+      //   cursor = p->region_head; // start over, we may overlap past regions now...
+      // }
+      // else if (addr == (void*)KERNBASE || addr > (void*)KERNBASE) //we've run out of memory!
+      // {
+      //   kmfree(r);
+      //   return (void*)-1;
+      // }
       cursor = cursor->next;
     }
     // Catch the final node that isn't checked in the loop
-    if (addr == cursor->start_addr)
-    {
-      addr += PGROUNDDOWN(PGSIZE+length);
-    }
-    /*
-    State after loop: 
-      - addr does not overlap with any other allocated region
-      - cursor is at the tail end of the list (cursor->next = 0)
-    */
+    // if (addr == cursor->start_addr)
+    // {
+    //   addr += PGROUNDDOWN(PGSIZE+cursor->length);
+    // }
 
     // Add new region to the end of our mmapped_regions list
     cursor->next = r;
@@ -201,12 +176,18 @@ int munmap(void *addr, uint length)
   int size = 0;
 
   // Check the head
-  if (p->region_head->start_addr == addr && p->region_head->length)
+  if (p->region_head->start_addr == addr && p->region_head->length == length)
   {
     /*deallocate the memory from the current process*/
     p->sz = deallocuvm(p->pgdir, p->sz, p->sz - length);
     switchuvm(p);
     p->nregions--;  
+
+    // close the file we were mapping to
+    if(p->region_head->region_type == MAP_FILE)
+    {
+      fileclose(p->ofile[p->region_head->fd]);
+    }
 
     if(p->region_head->next != 0)
     {
@@ -235,6 +216,12 @@ int munmap(void *addr, uint length)
       switchuvm(p);
       p->nregions--;  
       
+      // close the file we were mapping to
+      if(next->region_type == MAP_FILE)
+      {
+        fileclose(p->ofile[next->fd]);
+      }
+
       /*remove the node from our ll*/
       size = next->next->length;
       ll_delete(next, prev);
@@ -248,6 +235,50 @@ int munmap(void *addr, uint length)
   }
 
   // if there was no match, return -1
+  return -1;
+}
+
+/*  msync syncs that changes made to a file in memory back to the external file
+ *  thus solidifying the changes that occured via memory manipulation
+ *  Unless this function returns successfully, no changes made in a file-backed
+ *  mmap are guarenteed to remain in memory.
+ * 
+ *  Inputs: start_addr and length are the same as in mmap()
+ *  Output: returns 0 on success, -1 on failure.
+ */
+int msync (void* start_addr, uint length)
+{
+  //use same search method as in munmap
+  struct proc *p = myproc();
+
+  // If nothing has been allocated, there is nothing to msync
+  if (p->nregions == 0)
+  {
+    return -1;
+  }
+
+  // Travese our mmap dll to see if address and length are valid
+  mmapped_region *cursor = p->region_head;
+
+  while(cursor)
+  {
+    if(cursor->start_addr == start_addr && cursor->length == length)
+    {
+      // Make sure that the address was actually allocated
+      if(walkpgdir(p->pgdir, start_addr, 0) < 0)
+      {
+        return -1;
+      }
+
+      fileseek(p->ofile[cursor->fd], cursor->offset);
+      filewrite(p->ofile[cursor->fd], start_addr, length);
+      return 0;
+    }
+
+    cursor = cursor->next;
+  }
+
+  // If we went through the whole ll without finding a match
   return -1;
 }
 

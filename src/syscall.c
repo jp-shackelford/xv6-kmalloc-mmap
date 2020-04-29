@@ -107,6 +107,7 @@ extern int sys_kmalloc(void); //jps - added sys_ to syscall.c
 extern int sys_kmfree(void);  //
 extern int sys_mmap(void);    //
 extern int sys_munmap(void);  //
+extern int sys_msync(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -134,6 +135,7 @@ static int (*syscalls[])(void) = {
 [SYS_kmfree]  sys_kmfree,
 [SYS_mmap]    sys_mmap,
 [SYS_munmap]  sys_munmap,
+[SYS_msync]   sys_msync,
 };
 
 void

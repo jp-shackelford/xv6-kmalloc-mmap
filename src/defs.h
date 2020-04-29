@@ -10,6 +10,10 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
+#ifndef __ASSEMBLER__
+typedef uint pte_t;
+#endif
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -95,6 +99,7 @@ void            end_op();
 // jps - mmap.c
 void*           mmap(void *, uint, int, int, int, int);
 int             munmap(void *, uint);
+int             msync(void*, uint);
 void            free_mmap_ll(void);
 
 // mp.c
@@ -194,8 +199,9 @@ pde_t*          copyuvm(pde_t*, uint);
 void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
-void            clearpteu(pde_t *pgdir, char *uva);
-int             mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm); //jps - declared non-static mappages
+void            clearpteu(pde_t*, char*);
+int             mappages(pde_t*, void*, uint, uint, int); //jps - declared non-static mappages
+pte_t*          walkpgdir(pde_t*, const void*, int); //jps - removed static from walkpgdir
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

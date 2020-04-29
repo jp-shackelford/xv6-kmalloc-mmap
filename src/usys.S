@@ -33,3 +33,4 @@ SYSCALL(kmalloc)  //jps - added SYSCALL for kmalloc
 SYSCALL(kmfree)   //jps - added SYSCALL for kmfree
 SYSCALL(mmap)     //jps - added SYSCALL for mmap
 SYSCALL(munmap)   //jps - added SYSCALL for munmap
+SYSCALL(msync)    //jps - added SYSCALL for msync

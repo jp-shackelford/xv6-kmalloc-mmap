@@ -24,3 +24,4 @@
 #define SYS_kmfree  23  //
 #define SYS_mmap    24  //
 #define SYS_munmap  25  //
+#define SYS_msync   26  //
