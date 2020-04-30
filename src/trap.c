@@ -52,8 +52,11 @@ pagefault_handler(struct trapframe *tf)
   {
     //if (fault_addr == (uint)mmap_node->start_addr)
     if ((uint)(mmap_node->start_addr) <= fault_addr && (uint)(mmap_node->start_addr + mmap_node->length) > fault_addr)
-    {
-      valid = 1;
+    { 
+      if ((mmap_node->prot & PROT_WRITE) || !(tf->err & T_ERR_PGFLT_W)) 
+      {
+        valid = 1;
+      }
       break; //leave the loop once we found a valid entry
     }
     else
@@ -71,7 +74,7 @@ pagefault_handler(struct trapframe *tf)
 
     if(mem == 0)
     {
-      cprintf("Killed process in pagefault_handler\n");     
+      cprintf("Killed process in pagefault_handler: 0\n");     
       myproc()->killed = 1;
       return;
     }
@@ -90,23 +93,34 @@ pagefault_handler(struct trapframe *tf)
 
     if(mappages(curproc->pgdir, (char*)fault_addr, PGSIZE, V2P(mem), perm) < 0)
     {
-      cprintf("Killed process in pagefault_handler\n");     
+      cprintf("Killed process in pagefault_handler: 1\n");     
       myproc()->killed = 1;
       kfree(mem);
       return;
     }
 
+    switchuvm(curproc);
+
     // If we are performing file-backed mmap, seek to where we need to in the
     // file and then read it into the memory location allocated above (mem)
     if (mmap_node->region_type == MAP_FILE)
     {
-      fileseek(curproc->ofile[mmap_node->fd], mmap_node->offset);
-      fileread(curproc->ofile[mmap_node->fd], mem, mmap_node->length);
+      if (curproc->ofile[mmap_node->fd])
+      {
+        fileseek(curproc->ofile[mmap_node->fd], mmap_node->offset);
+        fileread(curproc->ofile[mmap_node->fd], mem, mmap_node->length);
+        //Clear the dirty bit after read:
+          pde_t* pde = &(myproc()->pgdir)[PDX(mmap_node->start_addr)];
+          pte_t* pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+          pte_t* pte = &pgtab[PTX(mmap_node->start_addr)];
+
+          *pte &= ~PTE_D;
+      }
     }
   }
   else  //Page fault on a non-allocated address
   {
-    cprintf("Killed process in pagefault_handler\n");     
+    cprintf("Killed process in pagefault_handler: 2\n");     
     myproc()->killed = 1;
   }
 }
@@ -142,7 +156,7 @@ trap(struct trapframe *tf)
       exit();
     return;
   }
-
+  
   switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
     if(cpuid() == 0){

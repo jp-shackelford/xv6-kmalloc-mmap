@@ -57,7 +57,7 @@ morecore(uint nu)
   if(p == 0)
     return 0;
   hp = (Header*)p;
-  hp->s.size = 4096; //kalloc always allocates 4096 bytes
+  hp->s.size = 4096 / sizeof(Header); //kalloc always allocates 4096 bytes
   kmfree((void*)(hp + 1));
   return freep;
 }

@@ -184,6 +184,15 @@ UPROGS=\
 	_wc\
 	_zombie\
 
+TPROGS=\
+	_test_1\
+	_test_2\
+	_test_3\
+	_test_4\
+	_test_5\
+	_test_6\
+	_test_7\
+
 fs.img: mkfs README sample.txt $(UPROGS)
 	./mkfs fs.img README sample.txt $(UPROGS)
 
@@ -194,7 +203,8 @@ clean:
 	*.o *.d *.asm *.sym vectors.S bootblock entryother \
 	initcode initcode.out kernel xv6.img fs.img kernelmemfs \
 	xv6memfs.img mkfs .gdbinit \
-	$(UPROGS)
+	$(UPROGS)\
+	$(TPROGS)
 
 # make a printout
 FILES = $(shell grep -v '^\#' runoff.list)

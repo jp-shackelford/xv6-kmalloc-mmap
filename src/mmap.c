@@ -70,7 +70,7 @@ void *mmap(void *addr, uint length, int prot, int flags, int fd, int offset)
   }
 
   // Assign list-data and meta-data to the new region
-  r->start_addr = (addr = (void*)PGROUNDDOWN((uint)oldsz));
+  r->start_addr = (addr = (void*)(PGROUNDDOWN(oldsz) + MMAPBASE));
   r->length = length;
   r->region_type = flags;
   r->offset = offset;
@@ -82,6 +82,7 @@ void *mmap(void *addr, uint length, int prot, int flags, int fd, int offset)
   {
     if (fd != -1) //fd must be -1 in this case (mmap man page sugestion for mobility)
     {
+      kmfree(r);
       return (void*)-1;
     }
     // do not set r->fd. Not needed for Anonymous mmap
@@ -90,6 +91,8 @@ void *mmap(void *addr, uint length, int prot, int flags, int fd, int offset)
   {
     if (fd > -1)
     {
+      if((fd=fdalloc(p->ofile[fd])) < 0)
+        return (void*)-1;
       filedup(p->ofile[fd]);
       r->fd = fd;
     }
@@ -107,32 +110,26 @@ void *mmap(void *addr, uint length, int prot, int flags, int fd, int offset)
   }
   else // Add region to an already existing mapped_regions list
   {
-    // First check if our address is already allocated in the head node
-    // if (addr == p->region_head->start_addr) // conflict! Increment addr by length
-    // {
-    //   addr += PGROUNDDOWN(PGSIZE+length);
-    // }
-    // Traverse the nodes in our dll to see if addr is already allocated
     mmapped_region* cursor = p->region_head;
     while (cursor->next != 0)
     {
-      // if (addr == cursor->start_addr)
-      // {
-      //   addr += PGROUNDDOWN(PGSIZE+cursor->length);
-      //   cursor = p->region_head; // start over, we may overlap past regions now...
-      // }
-      // else if (addr == (void*)KERNBASE || addr > (void*)KERNBASE) //we've run out of memory!
-      // {
-      //   kmfree(r);
-      //   return (void*)-1;
-      // }
+      if (addr == cursor->start_addr)
+      {
+        addr += PGROUNDDOWN(PGSIZE+cursor->length);
+        cursor = p->region_head; // start over, we may overlap past regions now...
+      }
+      else if (addr == (void*)KERNBASE || addr > (void*)KERNBASE) //we've run out of memory!
+      {
+        kmfree(r);
+        return (void*)-1;
+      }
       cursor = cursor->next;
     }
     // Catch the final node that isn't checked in the loop
-    // if (addr == cursor->start_addr)
-    // {
-    //   addr += PGROUNDDOWN(PGSIZE+cursor->length);
-    // }
+    if (addr == cursor->start_addr)
+    {
+      addr += PGROUNDDOWN(PGSIZE+cursor->length);
+    }
 
     // Add new region to the end of our mmapped_regions list
     cursor->next = r;
@@ -187,6 +184,7 @@ int munmap(void *addr, uint length)
     if(p->region_head->region_type == MAP_FILE)
     {
       fileclose(p->ofile[p->region_head->fd]);
+      p->ofile[p->region_head->fd] = 0;
     }
 
     if(p->region_head->next != 0)
@@ -220,6 +218,7 @@ int munmap(void *addr, uint length)
       if(next->region_type == MAP_FILE)
       {
         fileclose(p->ofile[next->fd]);
+        p->ofile[next->fd] = 0;
       }
 
       /*remove the node from our ll*/
@@ -265,9 +264,10 @@ int msync (void* start_addr, uint length)
     if(cursor->start_addr == start_addr && cursor->length == length)
     {
       // Make sure that the address was actually allocated
-      if(walkpgdir(p->pgdir, start_addr, 0) < 0)
+      pte_t* ret = walkpgdir(p->pgdir, start_addr, 0);
+      if((uint)ret & PTE_D)
       {
-        return -1;
+        //do not write back non-dirty pages
       }
 
       fileseek(p->ofile[cursor->fd], cursor->offset);

@@ -36,3 +36,6 @@
 #define IRQ_ERROR       19
 #define IRQ_SPURIOUS    31
 
+#define T_ERR_PGFLT_P   0x1     // When set, page fault caused by page-protection violation, else page-not-present
+#define T_ERR_PGFLT_W   0X2     // When set, page fault caused by write access, else read access
+#define T_ERR_PGFLT_U   0x4     // When set, page fault caused while CPL=3. (Not necessarily caused by privileges)
