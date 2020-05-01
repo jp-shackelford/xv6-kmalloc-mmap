@@ -30,9 +30,6 @@ static void ll_print(void);
 /* mmap creats a new mapping for the calling proc's address space
  * this function will round up to a page aligned address if needed
  * 
- * prot, flags, fd, and offset are not implemented in this version
- * of mmap
- * 
  * Inputs:  addr -  suggestion for starting address, mmap will
  *                  round up to page aligned addr if needed
  *                  (NULL --> place at any appropriate address)
@@ -41,7 +38,6 @@ static void ll_print(void);
  *          flags - info flags for mapped region
  *          fd -    file descriptors
  *          offset- offset for a file-backed allocation    
- * (prot, flags, fd, offeset are not implemented in this version)
  *  
  * Returns: starting address (page aligned) of mapped region
  *          or (void*)-1 on failure

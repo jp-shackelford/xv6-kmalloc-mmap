@@ -74,9 +74,7 @@ pagefault_handler(struct trapframe *tf)
 
     if(mem == 0)
     {
-      cprintf("Killed process in pagefault_handler: 0\n");     
-      myproc()->killed = 1;
-      return;
+      goto error;
     }
     memset(mem, 0, PGSIZE);
 
@@ -93,10 +91,8 @@ pagefault_handler(struct trapframe *tf)
 
     if(mappages(curproc->pgdir, (char*)fault_addr, PGSIZE, V2P(mem), perm) < 0)
     {
-      cprintf("Killed process in pagefault_handler: 1\n");     
-      myproc()->killed = 1;
       kfree(mem);
-      return;
+      goto error;
     }
 
     switchuvm(curproc);
@@ -120,8 +116,19 @@ pagefault_handler(struct trapframe *tf)
   }
   else  //Page fault on a non-allocated address
   {
-    cprintf("Killed process in pagefault_handler: 2\n");     
-    myproc()->killed = 1;
+    error:
+      if(myproc() == 0 || (tf->cs&3) == 0){
+        // In kernel, it must be our mistake.
+        cprintf("unexpected trap %d from cpu %d eip %x (cr2=0x%x)\n",
+                tf->trapno, cpuid(), tf->eip, rcr2());
+        panic("trap");
+      }
+      // In user space, assume process misbehaved.
+      cprintf("pid %d %s: trap %d err %d on cpu %d "
+              "eip 0x%x addr 0x%x--kill proc\n",
+              myproc()->pid, myproc()->name, tf->trapno,
+              tf->err, cpuid(), tf->eip, rcr2());
+      myproc()->killed = 1;
   }
 }
 
